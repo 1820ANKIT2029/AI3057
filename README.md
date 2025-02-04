@@ -1,14 +1,16 @@
-This is AI3057
+# This is AI3057
 
-List of Machine Learning and Deep Learning Algorithms
+## 🚀 My Projects
 
-- Search
+A list of my projects with their respective links.
 
+## 📌 Projects
 
-- Machine Learning
-
-
-- Deep Learning
+1. **Digit Recognizer** - [GitHub Repository](https://github.com/1820ANKIT2029/AI3057/tree/main/DL/digits)
 
 
-- Ankit Kumar
+---
+
+### 🔗 More Projects  
+Check out all my repositories: [GitHub Profile](https://github.com/1820ANKIT2029)
+
