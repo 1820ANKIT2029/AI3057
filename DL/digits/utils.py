@@ -2,6 +2,56 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+import requests
+import zipfile
+import os
+from time import strftime
+
+def download_data(base_path, data_folder, Data_url):
+    zip_path = os.path.join(base_path, data_folder, "data.zip")
+
+    # Ensure the folder exists
+    os.makedirs(data_folder, exist_ok=True)
+
+    # Download the ZIP file
+    response = requests.get(Data_url, stream=True)
+    if response.status_code == 200:
+        with open(zip_path, "wb") as file:
+            for chunk in response.iter_content(chunk_size=1024):
+                file.write(chunk)
+
+        # Extract the ZIP file
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(data_folder)
+
+        # Remove the ZIP file after extraction
+        os.remove(zip_path)
+
+        print(f"Data downloaded and extracted to '{data_folder}'")
+    else:
+        print("Failed to download the file")
+
+def save_model(base_path, model_folder, weights, metadata=None):
+    """Saves the trained NN weights and biases in a timestamped .npz file."""
+    # Ensure the model directory exists
+    model_dir = os.path.join(base_path, model_folder)
+    os.makedirs(model_dir, exist_ok=True)
+
+    filename = "model"
+    if metadata["iteration"]:
+        filename += ("-i-" + str(metadata["iteration"]))
+    if metadata["learning_rate"]:
+        filename += ("-lr-" + str(metadata["learning_rate"]))
+
+    # Generate the model file path with timestamp
+    model_path = os.path.join(model_dir, f'{filename}-{strftime("%Y%m%d-%H%M%S")}.npz')
+
+    # Save weights to .npz file
+    np.savez(model_path, **weights)
+
+    print(f"Model saved at: {model_path}")
+    return model_path
+
 def init_params():
     """
     layer weights and bias

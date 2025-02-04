@@ -2,19 +2,24 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from os import path, open, O_CREAT, close
-from time import strftime
+import os
 
-from utils import gradient_descent, forward_prop, get_accuracy, get_prediction
 
-base_path = path.dirname(__file__)
-train_path = path.join(base_path, 'data' , 'train.csv')
-model_path = path.join(base_path, 'model', f'model-{strftime("%Y%m%d-%H%M%S")}.npz')
-file = open(model_path, O_CREAT)
-close(file)
+from utils import gradient_descent, forward_prop, get_accuracy, get_prediction, download_data, save_model
 
-# print(base_path)
-# print(train_path)
+base_path = os.path.dirname(__file__)
+data_folder = "data"
+train_path = os.path.join(base_path, data_folder , 'train.csv')
+model_folder = "model"
+
+Data_url = "https://storage.googleapis.com/kaggle-competitions-data/kaggle-v2/3004/861823/bundle/archive.zip?GoogleAccessId=web-data@kaggle-161607.iam.gserviceaccount.com&Expires=1738938067&Signature=mC2qhHhy%2FqZQFxoQ0xewXMvin9O64rtJOxgq6QKrAQ8iVnz8hlz2PmVrQx7OpR%2B%2BtpLE6GDNcDqd3oqtRJgjlWcIrjiDBVRxfRBi6%2BmRTXvzvUj0JH5aKl7SNTndJiDmWUP2dTvgnISnSDX2EdWsI85DmGeXiUjNL9nQGsnxeN1fcx3Ma04lOLXWaFUkHdv3MxZGFOtMcZguA7A3Nmomyuo46ifkD07bbsFD6G6a8qqAxeRTb1XZqm5gLLTzyeKJJupoRP3tUjZHCgFKABkpF7%2FNHk%2B0Iv85mbbsEkyMnL9eb%2F81OZjk%2B3%2FJldcT0MboK2ZqlobHoItekZR1umn0eA%3D%3D&response-content-disposition=attachment%3B+filename%3Ddigit-recognizer.zip"
+
+if os.path.exists(data_folder) and any(os.scandir(data_folder)):
+    print("Data already exists. Skipping download.")
+else:
+    print("Data not found. Downloading...")
+
+    download_data(base_path, data_folder, Data_url)
 
 data = pd.read_csv(train_path)
 
@@ -39,8 +44,11 @@ test_X = test_X / 225.
 
 print(train_Y.shape, train_X.shape)
 
+learning_rate = 0.15
+iteration = 2000
+
 # training Neural network
-W1, b1, W2, b2 = gradient_descent(train_X, train_Y, 1000, 0.15)
+W1, b1, W2, b2 = gradient_descent(train_X, train_Y, iteration, learning_rate)
 
 print("<--Testing data-->")
 _, _, _, A2 = forward_prop(W1, b1, W2, b2, test_X)
@@ -53,4 +61,9 @@ weights = {
     "b2": b2
 }
 
-np.savez(model_path, **weights) # saving the trained NN weights and bias
+metadata = {
+    "learning_rate": learning_rate,
+    "iteration": iteration
+}
+
+save_model(base_path, model_folder, weights, metadata=metadata)
