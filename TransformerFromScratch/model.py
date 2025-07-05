@@ -23,13 +23,19 @@ class PositionalEncoding(tf.keras.layers.Layer):
         # create a matrix of shape (seq_len, d_model)
         pe = tf.zeros([seq_len, d_model])
         # create a vector of shape (seq_len, 1)
-        position = tf.range(0, seq_len, dtype=tf.float32).unsqueeze(1)
-        div_term  = tf.exp(tf.range(0, d_model, 2),float() * (-math.log(10000.0) / d_model))
+        position = tf.expand_dims(tf.range(0, seq_len, dtype=tf.float32), axis=1)
+        div_term  = tf.exp(tf.range(0, d_model, 2, dtype=tf.float32) * (-math.log(10000.0) / d_model))
         # apply the sin to even positions
-        pe[:, 0::2] = tf.sin(position * div_term)
-        pe[:, 1::2] = tf.cos(position * div_term)
+        pe_even = tf.sin(position * div_term)   # shape (max_seq_len, d_model/2)
+        pe_odd  = tf.cos(position * div_term)   # shape (max_seq_len, d_model/2)
 
-        pe = pe.unsequeeze(0) # (1, seq_len, d_model)
+         # Interleave them back together
+        pe = tf.reshape(
+            tf.concat([pe_even[:, :, tf.newaxis], pe_odd[:, :, tf.newaxis]], axis=2),
+            (seq_len, d_model)
+        )
+
+        pe = tf.expand_dims(pe, axis=0) # (1, seq_len, d_model)
 
         self.pe = tf.Variable(pe, trainable=False)  # non-trainable variable equivalent in torch (self.register_buffer('pe', pe))
 
@@ -96,7 +102,7 @@ class MultiHeadAttentionBlock(tf.keras.layers.Layer):
         x, self.attention_scores = MultiHeadAttentionBlock.attention(query, key, value, mask, self.dropout)
 
         # (Batch, h, seq_len, d_k) --> (Batch, seq_len, h, d_k) --> (Batch, seq_len, d_model)
-        x = tf.transpose(x, perm=[0,2,1])
+        x = tf.transpose(x, perm=[0,2,1, 3])
         x = tf.reshape(x, shape=[tf.shape(x)[0], -1, self.h * self.d_k])
 
         # (Batch, seq_len, d_model) --> (Batch, seq_len, d_model)
@@ -139,8 +145,8 @@ class EncoderBlock(tf.keras.layers.Layer):
         self.residual_connections = [ResidualConnection(dropout) for _ in range(2)]
 
     def call(self, x, src_mask):
-        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, src_mask))
-        x = self.residual_connections[1](x, self.feed_forword_block)
+        x = self.residual_connections[0](x, sublayer=lambda x: self.self_attention_block(x, x, x, src_mask))
+        x = self.residual_connections[1](x, sublayer=self.feed_forword_block)
 
         return x
     
@@ -173,9 +179,9 @@ class DecoderBlock(tf.keras.layers.Layer):
         self.residual_connections = [ResidualConnection(dropout) for _ in range(3)]
 
     def call(self, x, encoder_output, src_mask, tgt_mask):
-        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, tgt_mask))
-        x = self.residual_connections[1](x, lambda x: self.cross_attention_block(x, encoder_output, encoder_output, src_mask))
-        x = self.residual_connections[2](x, self.feed_forward_block)
+        x = self.residual_connections[0](x, sublayer=lambda x: self.self_attention_block(x, x, x, tgt_mask))
+        x = self.residual_connections[1](x, sublayer=lambda x: self.cross_attention_block(x, encoder_output, encoder_output, src_mask))
+        x = self.residual_connections[2](x, sublayer=self.feed_forward_block)
 
         return x
     
@@ -283,5 +289,7 @@ def build_transformer(
 
     # Create the transformer
     transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, projection_layer)
+
+    transformer.summary()
 
     return transformer
