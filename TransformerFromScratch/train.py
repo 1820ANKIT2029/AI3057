@@ -221,7 +221,7 @@ def get_model(config, vocab_src_len, vocab_tgt_len):
     return model
 
 def train_model(config):
-    # 1️⃣ Device detection
+    # Device detection
     gpus = tf.config.list_physical_devices('GPU')
     mps = tf.config.list_physical_devices('MPS')
     if gpus:
@@ -237,10 +237,10 @@ def train_model(config):
         print("      On Windows with NVidia GPU, see: https://www.tensorflow.org/install/gpu")
         print("      On Mac (M1/M2), see: https://developer.apple.com/metal/tensorflow-plugin/")
 
-    # 2️⃣ Make sure the weights folder exists
+    # Make sure the weights folder exists
     Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
 
-    # 3️⃣ Load dataset and model
+    # Load dataset and model
     train_dataset, val_dataset, tokenizer_src, tokenizer_tgt = get_ds(config)
     vocab_size_src = tokenizer_src.get_vocab_size()
     vocab_size_tgt = tokenizer_tgt.get_vocab_size()
@@ -248,16 +248,16 @@ def train_model(config):
     with tf.device(device):
         model = get_model(config, vocab_size_src, vocab_size_tgt)
 
-    # 4️⃣ TensorBoard
+    # TensorBoard
     writer = tf.summary.create_file_writer(config['experiment_name'])
 
-    # 5️⃣ Optimizer & loss
+    # Optimizer & loss
     optimizer = tf.keras.optimizers.Adam(learning_rate=config['lr'], epsilon=1e-9)
     loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True, reduction='none'
     )
 
-    # 6️⃣ Restore checkpoint if exists
+    # Restore checkpoint if exists
     checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=model)
     checkpoint_manager = tf.train.CheckpointManager(
         checkpoint,
@@ -276,7 +276,7 @@ def train_model(config):
     else:
         print("No preload specified, starting from scratch.")
 
-    # 7️⃣ Training loop
+    # Training loop
     for epoch in range(initial_epoch, config['num_epochs']):
         print(f"Epoch {epoch:02d} ---------------------")
         # Progress bar
@@ -316,10 +316,10 @@ def train_model(config):
             with writer.as_default():
                 tf.summary.scalar('train loss', loss, step=global_step)
 
-        # 8️⃣ Validation
+        # Validation
         run_validation(model, val_dataset, tokenizer_src, tokenizer_tgt, config['seq_len'], device, print, global_step, writer)
 
-        # 9️⃣ Save checkpoint
+        # Save checkpoint
         checkpoint_manager.save()
         print(f"Checkpoint saved at epoch {epoch:02d}")
 
@@ -402,7 +402,7 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
                 print_msg('-'*console_width)
                 break
 
-    # ✅ Metrics
+    # Metrics
     if writer:
         with writer.as_default():
             # Character error rate
